@@ -50,15 +50,3 @@ FastAPI automatically generates interactive API documentation:
 - **ReDoc**: `http://localhost:8080/redoc`
 
 These provide interactive documentation where you can test API endpoints directly from your browser.
-
-### Automated Testing
-Run the test suite:
-
-```bash
-# Run the main test script
-python test_app.py
-
-# Run unit tests
-cd backend
-python -m pytest tests.py -v
-```
