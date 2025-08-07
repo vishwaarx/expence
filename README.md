@@ -24,11 +24,6 @@ expense-tracker/
 
 ### Installation
 
-1. **Clone or download the project**
-   ```bash
-   cd expense-tracker
-   ```
-
 2. **Install Python dependencies**
    ```bash
    pip install -r requirements.txt
