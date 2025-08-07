@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker - Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .nav-tab {
+            padding: 15px 30px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tab.active {
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+            background: white;
+        }
+
+        .nav-tab:hover {
+            color: #667eea;
+        }
+
+        .tab-content {
+            padding: 30px;
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .chart-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-card h3 {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-card .value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-card .trend {
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        .trend.positive {
+            color: #51cf66;
+        }
+
+        .trend.negative {
+            color: #ff6b6b;
+        }
+
+        .filters {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            align-items: end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .filter-group input, .filter-group select {
+            padding: 10px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .nav-tabs {
+                flex-direction: column;
+            }
+            
+            .nav-tab {
+                text-align: center;
+            }
+            
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Expense Analytics</h1>
+            <p>Advanced insights and visualizations</p>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('overview')">Overview</button>
+            <button class="nav-tab" onclick="showTab('charts')">Charts</button>
+            <button class="nav-tab" onclick="showTab('trends')">Trends</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Expenses</h3>
+                    <div class="value" id="totalExpenses">0</div>
+                    <div class="trend positive" id="expensesTrend">+0% this month</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Amount</h3>
+                    <div class="value" id="totalAmount">$0.00</div>
+                    <div class="trend positive" id="amountTrend">+0% this month</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Average per Expense</h3>
+                    <div class="value" id="averageAmount">$0.00</div>
+                    <div class="trend" id="averageTrend">No change</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Top Category</h3>
+                    <div class="value" id="topCategory">None</div>
+                    <div class="trend" id="categoryTrend">No data</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3 class="chart-title">Category Breakdown</h3>
+                <canvas id="categoryChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Charts Tab -->
+        <div id="charts" class="tab-content">
+            <div class="filters">
+                <h3>Filter Options</h3>
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="dateFrom">From Date</label>
+                        <input type="date" id="dateFrom">
+                    </div>
+                    <div class="filter-group">
+                        <label for="dateTo">To Date</label>
+                        <input type="date" id="dateTo">
+                    </div>
+                    <div class="filter-group">
+                        <label for="categoryFilter">Category</label>
+                        <select id="categoryFilter">
+                            <option value="">All Categories</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <button class="btn" onclick="applyFilters()">Apply Filters</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3 class="chart-title">Monthly Spending Trend</h3>
+                <canvas id="trendChart" width="400" height="200"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h3 class="chart-title">Daily Spending Pattern</h3>
+                <canvas id="dailyChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Trends Tab -->
+        <div id="trends" class="tab-content">
+            <div class="chart-container">
+                <h3 class="chart-title">Spending by Day of Week</h3>
+                <canvas id="weekdayChart" width="400" height="200"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h3 class="chart-title">Category Comparison</h3>
+                <canvas id="comparisonChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8080/api';
+        let expenses = [];
+        let charts = {};
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadExpenses();
+            setupDateFilters();
+        });
+
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            // Initialize charts for the selected tab
+            if (tabName === 'charts') {
+                setTimeout(() => {
+                    createTrendChart();
+                    createDailyChart();
+                }, 100);
+            } else if (tabName === 'trends') {
+                setTimeout(() => {
+                    createWeekdayChart();
+                    createComparisonChart();
+                }, 100);
+            }
+        }
+
+        async function loadExpenses() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/expenses`);
+                expenses = await response.json();
+                
+                updateOverview();
+                createCategoryChart();
+                populateCategoryFilter();
+            } catch (error) {
+                console.error('Error loading expenses:', error);
+            }
+        }
+
+        function updateOverview() {
+            if (expenses.length === 0) {
+                document.getElementById('totalExpenses').textContent = '0';
+                document.getElementById('totalAmount').textContent = '$0.00';
+                document.getElementById('averageAmount').textContent = '$0.00';
+                document.getElementById('topCategory').textContent = 'None';
+                return;
+            }
+
+            const totalAmount = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+            const averageAmount = totalAmount / expenses.length;
+            
+            // Find top category
+            const categoryTotals = {};
+            expenses.forEach(exp => {
+                categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
+            });
+            
+            const topCategory = Object.entries(categoryTotals)
+                .sort(([,a], [,b]) => b - a)[0];
+
+            document.getElementById('totalExpenses').textContent = expenses.length;
+            document.getElementById('totalAmount').textContent = `$${totalAmount.toFixed(2)}`;
+            document.getElementById('averageAmount').textContent = `$${averageAmount.toFixed(2)}`;
+            document.getElementById('topCategory').textContent = topCategory ? topCategory[0] : 'None';
+        }
+
+        function createCategoryChart() {
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            
+            if (charts.categoryChart) {
+                charts.categoryChart.destroy();
+            }
+
+            const categoryTotals = {};
+            expenses.forEach(exp => {
+                categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
+            });
+
+            const colors = [
+                '#667eea', '#764ba2', '#f093fb', '#f5576c',
+                '#4facfe', '#00f2fe', '#43e97b', '#38f9d7'
+            ];
+
+            charts.categoryChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(categoryTotals),
+                    datasets: [{
+                        data: Object.values(categoryTotals),
+                        backgroundColor: colors.slice(0, Object.keys(categoryTotals).length),
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function createTrendChart() {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            if (charts.trendChart) {
+                charts.trendChart.destroy();
+            }
+
+            // Group expenses by month
+            const monthlyData = {};
+            expenses.forEach(exp => {
+                const month = exp.date.substring(0, 7); // YYYY-MM
+                monthlyData[month] = (monthlyData[month] || 0) + exp.amount;
+            });
+
+            const months = Object.keys(monthlyData).sort();
+            const amounts = months.map(month => monthlyData[month]);
+
+            charts.trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Monthly Spending',
+                        data: amounts,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createDailyChart() {
+            const ctx = document.getElementById('dailyChart').getContext('2d');
+            
+            if (charts.dailyChart) {
+                charts.dailyChart.destroy();
+            }
+
+            // Group expenses by date
+            const dailyData = {};
+            expenses.forEach(exp => {
+                dailyData[exp.date] = (dailyData[exp.date] || 0) + exp.amount;
+            });
+
+            const dates = Object.keys(dailyData).sort();
+            const amounts = dates.map(date => dailyData[date]);
+
+            charts.dailyChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Daily Spending',
+                        data: amounts,
+                        backgroundColor: '#764ba2',
+                        borderColor: '#667eea',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createWeekdayChart() {
+            const ctx = document.getElementById('weekdayChart').getContext('2d');
+            
+            if (charts.weekdayChart) {
+                charts.weekdayChart.destroy();
+            }
+
+            const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const weekdayData = {};
+            weekdays.forEach(day => weekdayData[day] = 0);
+
+            expenses.forEach(exp => {
+                const date = new Date(exp.date);
+                const dayName = weekdays[date.getDay()];
+                weekdayData[dayName] += exp.amount;
+            });
+
+            charts.weekdayChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: weekdays,
+                    datasets: [{
+                        label: 'Spending by Day of Week',
+                        data: Object.values(weekdayData),
+                        backgroundColor: '#f093fb',
+                        borderColor: '#667eea',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createComparisonChart() {
+            const ctx = document.getElementById('comparisonChart').getContext('2d');
+            
+            if (charts.comparisonChart) {
+                charts.comparisonChart.destroy();
+            }
+
+            const categoryTotals = {};
+            const categoryCounts = {};
+            
+            expenses.forEach(exp => {
+                categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
+                categoryCounts[exp.category] = (categoryCounts[exp.category] || 0) + 1;
+            });
+
+            const categories = Object.keys(categoryTotals);
+            const totals = Object.values(categoryTotals);
+            const counts = categories.map(cat => categoryCounts[cat]);
+
+            charts.comparisonChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: categories,
+                    datasets: [{
+                        label: 'Total Amount',
+                        data: totals,
+                        backgroundColor: '#667eea',
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Number of Expenses',
+                        data: counts,
+                        backgroundColor: '#764ba2',
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toFixed(2);
+                                }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupDateFilters() {
+            const today = new Date();
+            const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+            
+            document.getElementById('dateFrom').value = lastMonth.toISOString().split('T')[0];
+            document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+        }
+
+        function populateCategoryFilter() {
+            const categories = [...new Set(expenses.map(exp => exp.category))];
+            const select = document.getElementById('categoryFilter');
+            
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                select.appendChild(option);
+            });
+        }
+
+        function applyFilters() {
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const category = document.getElementById('categoryFilter').value;
+
+            let filteredExpenses = expenses;
+
+            if (dateFrom && dateTo) {
+                filteredExpenses = filteredExpenses.filter(exp => 
+                    exp.date >= dateFrom && exp.date <= dateTo
+                );
+            }
+
+            if (category) {
+                filteredExpenses = filteredExpenses.filter(exp => 
+                    exp.category === category
+                );
+            }
+
+            // Update charts with filtered data
+            updateChartsWithData(filteredExpenses);
+        }
+
+        function updateChartsWithData(data) {
+            // Update trend chart
+            if (charts.trendChart) {
+                const monthlyData = {};
+                data.forEach(exp => {
+                    const month = exp.date.substring(0, 7);
+                    monthlyData[month] = (monthlyData[month] || 0) + exp.amount;
+                });
+
+                const months = Object.keys(monthlyData).sort();
+                const amounts = months.map(month => monthlyData[month]);
+
+                charts.trendChart.data.labels = months;
+                charts.trendChart.data.datasets[0].data = amounts;
+                charts.trendChart.update();
+            }
+
+            // Update daily chart
+            if (charts.dailyChart) {
+                const dailyData = {};
+                data.forEach(exp => {
+                    dailyData[exp.date] = (dailyData[exp.date] || 0) + exp.amount;
+                });
+
+                const dates = Object.keys(dailyData).sort();
+                const amounts = dates.map(date => dailyData[date]);
+
+                charts.dailyChart.data.labels = dates;
+                charts.dailyChart.data.datasets[0].data = amounts;
+                charts.dailyChart.update();
+            }
+        }
+    </script>
+</body>
+</html> 
